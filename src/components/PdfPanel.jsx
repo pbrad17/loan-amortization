@@ -58,14 +58,18 @@ const COLS = [
   { key: 'endingBalance', label: 'End. Balance', width: '14%', align: 'right' },
 ];
 
+const ROWS_FIRST_PAGE = 25;
 const ROWS_PER_PAGE = 40;
 
 function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
   const s = stylesCache[theme] || stylesCache.light;
 
-  const pages = [];
-  for (let i = 0; i < schedule.length; i += ROWS_PER_PAGE) {
-    pages.push(schedule.slice(i, i + ROWS_PER_PAGE));
+  // First page gets fewer rows (summary takes space), rest get full 40
+  const firstChunk = schedule.slice(0, ROWS_FIRST_PAGE);
+  const remaining = schedule.slice(ROWS_FIRST_PAGE);
+  const laterPages = [];
+  for (let i = 0; i < remaining.length; i += ROWS_PER_PAGE) {
+    laterPages.push(remaining.slice(i, i + ROWS_PER_PAGE));
   }
 
   const formatVal = (key, row) => {
@@ -74,9 +78,28 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
     return formatCurrency(row[key]);
   };
 
+  const renderTableHeader = () => (
+    <View style={s.tableHeader}>
+      {COLS.map(col => (
+        <Text key={col.key} style={[s.th, { width: col.width, textAlign: col.align }]}>{col.label}</Text>
+      ))}
+    </View>
+  );
+
+  const renderRows = (chunk, startAlt = 0) =>
+    chunk.map((row, i) => (
+      <View key={row.period} style={[s.row, (i + startAlt) % 2 === 0 ? s.rowEven : s.rowAlt]}>
+        {COLS.map(col => (
+          <Text key={col.key} style={[s.cell, { width: col.width, textAlign: col.align }]}>
+            {formatVal(col.key, row)}
+          </Text>
+        ))}
+      </View>
+    ));
+
   return (
     <Document>
-      {/* Summary Page */}
+      {/* Page 1: Summary + beginning of schedule */}
       <Page size="LETTER" style={s.page}>
         <View style={s.header}>
           <Text style={s.title}>Loan Amortization Report</Text>
@@ -105,25 +128,20 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
             </View>
           ))}
         </View>
+
+        {firstChunk.length > 0 && (
+          <>
+            {renderTableHeader()}
+            {renderRows(firstChunk)}
+          </>
+        )}
       </Page>
 
-      {/* Schedule pages — uniform 40 rows each */}
-      {pages.map((chunk, pageIdx) => (
+      {/* Continuation pages */}
+      {laterPages.map((chunk, pageIdx) => (
         <Page key={pageIdx} size="LETTER" style={s.page}>
-          <View style={s.tableHeader}>
-            {COLS.map(col => (
-              <Text key={col.key} style={[s.th, { width: col.width, textAlign: col.align }]}>{col.label}</Text>
-            ))}
-          </View>
-          {chunk.map((row, i) => (
-            <View key={row.period} style={[s.row, i % 2 === 0 ? s.rowEven : s.rowAlt]}>
-              {COLS.map(col => (
-                <Text key={col.key} style={[s.cell, { width: col.width, textAlign: col.align }]}>
-                  {formatVal(col.key, row)}
-                </Text>
-              ))}
-            </View>
-          ))}
+          {renderTableHeader()}
+          {renderRows(chunk)}
         </Page>
       ))}
     </Document>
