@@ -105,7 +105,7 @@ export function generateSchedule(loanInputs, extraPaymentOverrides = {}) {
       paymentDate: toDateString(paymentDate),
       beginningBalance: balance,
       scheduledPayment,
-      principalPortion,
+      principalPortion: principalPortion + extraPayment,
       interestPortion,
       extraPayment,
       isOverridden,
