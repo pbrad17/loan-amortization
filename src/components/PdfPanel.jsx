@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Document, Page, Text, View, StyleSheet, pdf,
 } from '@react-pdf/renderer';
@@ -61,8 +61,14 @@ const COLS = [
 const ROWS_FIRST_PAGE = 25;
 const ROWS_PER_PAGE = 40;
 
-function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
+function AmortizationDoc({ loanInputs, schedule, summary, theme, visibleCols }) {
   const s = stylesCache[theme] || stylesCache.light;
+
+  // Redistribute column widths evenly among visible columns
+  const cols = visibleCols.map(col => ({
+    ...col,
+    width: `${(100 / visibleCols.length).toFixed(2)}%`,
+  }));
 
   // First page gets fewer rows (summary takes space), rest get full 40
   const firstChunk = schedule.slice(0, ROWS_FIRST_PAGE);
@@ -80,7 +86,7 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
 
   const renderTableHeader = () => (
     <View style={s.tableHeader}>
-      {COLS.map(col => (
+      {cols.map(col => (
         <Text key={col.key} style={[s.th, { width: col.width, textAlign: col.align }]}>{col.label}</Text>
       ))}
     </View>
@@ -89,7 +95,7 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
   const renderRows = (chunk, startAlt = 0) =>
     chunk.map((row, i) => (
       <View key={row.period} style={[s.row, (i + startAlt) % 2 === 0 ? s.rowEven : s.rowAlt]}>
-        {COLS.map(col => (
+        {cols.map(col => (
           <Text key={col.key} style={[s.cell, { width: col.width, textAlign: col.align }]}>
             {formatVal(col.key, row)}
           </Text>
@@ -151,12 +157,31 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
 export default function PdfPanel() {
   const { loanInputs, schedule, summary, theme } = useAppContext();
   const [generating, setGenerating] = useState(false);
+  const [enabledCols, setEnabledCols] = useState(() =>
+    Object.fromEntries(COLS.map(c => [c.key, true]))
+  );
+
+  const visibleCols = useMemo(
+    () => COLS.filter(c => enabledCols[c.key]),
+    [enabledCols]
+  );
+
+  const toggleCol = (key) => {
+    setEnabledCols(prev => {
+      const next = { ...prev, [key]: !prev[key] };
+      // Ensure at least one column stays enabled
+      if (Object.values(next).every(v => !v)) return prev;
+      return next;
+    });
+  };
+
+  const allEnabled = COLS.every(c => enabledCols[c.key]);
 
   const today = new Date().toISOString().split('T')[0];
   const fileName = `Loan_Amortization_Report_${today}.pdf`;
 
   const handleGenerate = useCallback(async () => {
-    if (!schedule.length) return;
+    if (!schedule.length || !visibleCols.length) return;
     setGenerating(true);
     try {
       const blob = await pdf(
@@ -165,6 +190,7 @@ export default function PdfPanel() {
           schedule={schedule}
           summary={summary}
           theme={theme}
+          visibleCols={visibleCols}
         />
       ).toBlob();
 
@@ -178,7 +204,7 @@ export default function PdfPanel() {
       console.error('PDF generation failed:', e);
     }
     setGenerating(false);
-  }, [loanInputs, schedule, summary, theme, fileName]);
+  }, [loanInputs, schedule, summary, theme, fileName, visibleCols]);
 
   return (
     <div>
@@ -189,6 +215,34 @@ export default function PdfPanel() {
           <p className="text-sm text-steel-blue mb-3">
             Generate a complete loan amortization report as a PDF document. The report includes the loan summary and full amortization schedule.
           </p>
+
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-steel-blue">Schedule Columns</span>
+              <button
+                onClick={() => setEnabledCols(Object.fromEntries(COLS.map(c => [c.key, !allEnabled])))}
+                className="text-xs text-accent hover:underline"
+              >
+                {allEnabled ? 'Deselect All' : 'Select All'}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {COLS.map(col => (
+                <label key={col.key} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={enabledCols[col.key]}
+                    onChange={() => toggleCol(col.key)}
+                    className="accent-accent"
+                  />
+                  <span className={enabledCols[col.key] ? 'text-text-primary' : 'text-text-primary/40'}>
+                    {col.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <button
             onClick={handleGenerate}
             disabled={generating || !schedule.length}
