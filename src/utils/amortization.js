@@ -75,15 +75,17 @@ export function generateSchedule(loanInputs, extraPaymentOverrides = {}) {
 
     // Cap principal + extra so we don't overpay
     if (principalPortion + extraPayment >= balance) {
-      const finalPrincipal = balance;
-      const finalExtra = 0;
-      const totalPayment = interestPortion + finalPrincipal;
+      // Regular principal is capped at balance (no extra needed if regular covers it)
+      const regularPrincipal = Math.min(principalPortion, balance);
+      const finalExtra = Math.max(0, balance - regularPrincipal);
+      const finalScheduled = interestPortion + regularPrincipal;
+      const totalPayment = interestPortion + balance;
       schedule.push({
         period,
         paymentDate: toDateString(paymentDate),
         beginningBalance: balance,
-        scheduledPayment: totalPayment,
-        principalPortion: finalPrincipal,
+        scheduledPayment: finalScheduled,
+        principalPortion: balance,
         interestPortion,
         extraPayment: finalExtra,
         isOverridden: false,
