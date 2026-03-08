@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import {
   Document, Page, Text, View, StyleSheet, pdf,
 } from '@react-pdf/renderer';
-import { useAppContext } from '../AppContext';
+import { useAppContext, SCHEDULE_COLS } from '../AppContext';
 import { formatCurrency, formatDate, formatPercent } from '../utils/formatting';
 
 const PALETTES = {
@@ -47,16 +47,18 @@ const stylesCache = {
   light: makeStyles(PALETTES.light),
 };
 
-const COLS = [
-  { key: 'period', label: '#', width: '5%', align: 'left' },
-  { key: 'paymentDate', label: 'Date', width: '13%', align: 'left' },
-  { key: 'beginningBalance', label: 'Beg. Balance', width: '14%', align: 'right' },
-  { key: 'totalPayment', label: 'Total Payment', width: '14%', align: 'right' },
-  { key: 'principalPortion', label: 'Principal', width: '14%', align: 'right' },
-  { key: 'interestPortion', label: 'Interest', width: '14%', align: 'right' },
-  { key: 'extraPayment', label: 'Extra', width: '12%', align: 'right' },
-  { key: 'endingBalance', label: 'End. Balance', width: '14%', align: 'right' },
-];
+// Column label abbreviations for PDF (narrower space)
+const PDF_LABELS = {
+  period: '#',
+  paymentDate: 'Date',
+  beginningBalance: 'Beg. Balance',
+  scheduledPayment: 'Regular Pmt',
+  extraPayment: 'Extra Pmt',
+  totalPayment: 'Total Pmt',
+  principalPortion: 'Principal',
+  interestPortion: 'Interest',
+  endingBalance: 'End. Balance',
+};
 
 const ROWS_FIRST_PAGE = 25;
 const ROWS_PER_PAGE = 40;
@@ -155,27 +157,31 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme, visibleCols }) 
 }
 
 export default function PdfPanel() {
-  const { loanInputs, schedule, summary, theme } = useAppContext();
+  const { loanInputs, schedule, summary, theme, columnOrder } = useAppContext();
   const [generating, setGenerating] = useState(false);
   const [enabledCols, setEnabledCols] = useState(() =>
-    Object.fromEntries(COLS.map(c => [c.key, true]))
+    Object.fromEntries(SCHEDULE_COLS.map(c => [c.key, true]))
   );
 
+  // Respect column order from context, then filter by enabled
+  const orderedAllCols = columnOrder
+    .map(key => SCHEDULE_COLS.find(c => c.key === key))
+    .filter(Boolean);
+
   const visibleCols = useMemo(
-    () => COLS.filter(c => enabledCols[c.key]),
-    [enabledCols]
+    () => orderedAllCols.filter(c => enabledCols[c.key]),
+    [enabledCols, columnOrder]
   );
 
   const toggleCol = (key) => {
     setEnabledCols(prev => {
       const next = { ...prev, [key]: !prev[key] };
-      // Ensure at least one column stays enabled
       if (Object.values(next).every(v => !v)) return prev;
       return next;
     });
   };
 
-  const allEnabled = COLS.every(c => enabledCols[c.key]);
+  const allEnabled = SCHEDULE_COLS.every(c => enabledCols[c.key]);
 
   const today = new Date().toISOString().split('T')[0];
   const fileName = `Loan_Amortization_Report_${today}.pdf`;
@@ -184,13 +190,18 @@ export default function PdfPanel() {
     if (!schedule.length || !visibleCols.length) return;
     setGenerating(true);
     try {
+      // Use abbreviated labels for PDF columns
+      const pdfCols = visibleCols.map(c => ({
+        ...c,
+        label: PDF_LABELS[c.key] || c.label,
+      }));
       const blob = await pdf(
         <AmortizationDoc
           loanInputs={loanInputs}
           schedule={schedule}
           summary={summary}
           theme={theme}
-          visibleCols={visibleCols}
+          visibleCols={pdfCols}
         />
       ).toBlob();
 
@@ -220,14 +231,14 @@ export default function PdfPanel() {
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-steel-blue">Schedule Columns</span>
               <button
-                onClick={() => setEnabledCols(Object.fromEntries(COLS.map(c => [c.key, !allEnabled])))}
+                onClick={() => setEnabledCols(Object.fromEntries(SCHEDULE_COLS.map(c => [c.key, !allEnabled])))}
                 className="text-xs text-accent hover:underline"
               >
                 {allEnabled ? 'Deselect All' : 'Select All'}
               </button>
             </div>
             <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {COLS.map(col => (
+              {orderedAllCols.map(col => (
                 <label key={col.key} className="flex items-center gap-1.5 text-sm cursor-pointer">
                   <input
                     type="checkbox"

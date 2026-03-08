@@ -5,6 +5,20 @@ const AppContext = createContext();
 
 const todayStr = new Date().toISOString().split('T')[0];
 
+export const SCHEDULE_COLS = [
+  { key: 'period', label: '#', align: 'left' },
+  { key: 'paymentDate', label: 'Payment Date', align: 'left' },
+  { key: 'beginningBalance', label: 'Beginning Balance', align: 'right' },
+  { key: 'scheduledPayment', label: 'Regular Payment', align: 'right' },
+  { key: 'extraPayment', label: 'Extra Payment', align: 'right' },
+  { key: 'totalPayment', label: 'Total Payment', align: 'right' },
+  { key: 'principalPortion', label: 'Principal', align: 'right' },
+  { key: 'interestPortion', label: 'Interest', align: 'right' },
+  { key: 'endingBalance', label: 'Ending Balance', align: 'right' },
+];
+
+const DEFAULT_COL_ORDER = SCHEDULE_COLS.map(c => c.key);
+
 export function AppProvider({ children }) {
   const [loanInputs, setLoanInputs] = useState({
     loanBalance: 0,
@@ -18,6 +32,7 @@ export function AppProvider({ children }) {
   const [extraPaymentOverrides, setExtraPaymentOverrides] = useState({});
   const [activeTab, setActiveTab] = useState('inputs');
   const [theme, setTheme] = useState(() => localStorage.getItem('amort-theme') || 'light');
+  const [columnOrder, setColumnOrder] = useState(DEFAULT_COL_ORDER);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -79,6 +94,7 @@ export function AppProvider({ children }) {
     schedule, summary,
     activeTab, setActiveTab,
     theme, toggleTheme,
+    columnOrder, setColumnOrder,
     loadSession,
   };
 

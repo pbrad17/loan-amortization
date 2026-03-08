@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useAppContext } from '../AppContext';
+import { useState, useRef } from 'react';
+import { useAppContext, SCHEDULE_COLS } from '../AppContext';
 import { formatCurrency, formatDate, formatPercent } from '../utils/formatting';
 
 function ExtraPaymentCell({ period, value, isOverridden, globalExtra }) {
@@ -67,8 +67,41 @@ function ExtraPaymentCell({ period, value, isOverridden, globalExtra }) {
   );
 }
 
+function formatCell(key, row) {
+  if (key === 'period') return String(row.period);
+  if (key === 'paymentDate') return formatDate(row.paymentDate);
+  return formatCurrency(row[key]);
+}
+
 export default function SchedulePanel() {
-  const { loanInputs, schedule, summary } = useAppContext();
+  const { loanInputs, schedule, summary, columnOrder, setColumnOrder } = useAppContext();
+  const dragCol = useRef(null);
+  const dragOverCol = useRef(null);
+
+  const orderedCols = columnOrder
+    .map(key => SCHEDULE_COLS.find(c => c.key === key))
+    .filter(Boolean);
+
+  const handleDragStart = (key) => {
+    dragCol.current = key;
+  };
+
+  const handleDragOver = (e, key) => {
+    e.preventDefault();
+    dragOverCol.current = key;
+  };
+
+  const handleDrop = () => {
+    if (!dragCol.current || !dragOverCol.current || dragCol.current === dragOverCol.current) return;
+    const newOrder = [...columnOrder];
+    const fromIdx = newOrder.indexOf(dragCol.current);
+    const toIdx = newOrder.indexOf(dragOverCol.current);
+    newOrder.splice(fromIdx, 1);
+    newOrder.splice(toIdx, 0, dragCol.current);
+    setColumnOrder(newOrder);
+    dragCol.current = null;
+    dragOverCol.current = null;
+  };
 
   if (!schedule.length) {
     return (
@@ -131,40 +164,48 @@ export default function SchedulePanel() {
         )}
       </div>
 
+      <p className="text-xs text-steel-blue mb-2">Drag column headers to reorder.</p>
+
       {/* Amortization Table */}
       <div className="bg-dark-bg rounded-lg border border-border overflow-hidden">
         <div className="max-h-[600px] overflow-y-auto">
           <table className="w-full text-xs">
             <thead className="sticky top-0 z-10">
               <tr className="bg-header-bg text-text-primary">
-                <th className="px-3 py-2 text-left">#</th>
-                <th className="px-3 py-2 text-left">Payment Date</th>
-                <th className="px-3 py-2 text-right">Beginning Balance</th>
-                <th className="px-3 py-2 text-right">Total Payment</th>
-                <th className="px-3 py-2 text-right">Principal</th>
-                <th className="px-3 py-2 text-right">Interest</th>
-                <th className="px-3 py-2 text-right">Extra Payment</th>
-                <th className="px-3 py-2 text-right">Ending Balance</th>
+                {orderedCols.map(col => (
+                  <th
+                    key={col.key}
+                    draggable
+                    onDragStart={() => handleDragStart(col.key)}
+                    onDragOver={(e) => handleDragOver(e, col.key)}
+                    onDrop={handleDrop}
+                    className={`px-3 py-2 text-${col.align} cursor-grab active:cursor-grabbing select-none`}
+                  >
+                    {col.label}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {schedule.map((row, i) => (
                 <tr key={row.period} className={i % 2 === 0 ? 'bg-dark-bg' : 'bg-alt-bg'}>
-                  <td className="px-3 py-1.5 text-steel-blue">{row.period}</td>
-                  <td className="px-3 py-1.5">{formatDate(row.paymentDate)}</td>
-                  <td className="px-3 py-1.5 text-right">{formatCurrency(row.beginningBalance)}</td>
-                  <td className="px-3 py-1.5 text-right font-medium">{formatCurrency(row.totalPayment)}</td>
-                  <td className="px-3 py-1.5 text-right">{formatCurrency(row.principalPortion)}</td>
-                  <td className="px-3 py-1.5 text-right">{formatCurrency(row.interestPortion)}</td>
-                  <td className="px-3 py-1.5 text-right">
-                    <ExtraPaymentCell
-                      period={row.period}
-                      value={row.extraPayment}
-                      isOverridden={row.isOverridden}
-                      globalExtra={loanInputs.globalExtraPayment || 0}
-                    />
-                  </td>
-                  <td className="px-3 py-1.5 text-right">{formatCurrency(row.endingBalance)}</td>
+                  {orderedCols.map(col => (
+                    <td
+                      key={col.key}
+                      className={`px-3 py-1.5 text-${col.align}${col.key === 'period' ? ' text-steel-blue' : ''}${col.key === 'totalPayment' ? ' font-medium' : ''}`}
+                    >
+                      {col.key === 'extraPayment' ? (
+                        <ExtraPaymentCell
+                          period={row.period}
+                          value={row.extraPayment}
+                          isOverridden={row.isOverridden}
+                          globalExtra={loanInputs.globalExtraPayment || 0}
+                        />
+                      ) : (
+                        formatCell(col.key, row)
+                      )}
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>
