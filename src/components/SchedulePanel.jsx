@@ -179,7 +179,7 @@ export default function SchedulePanel() {
                     onDragStart={() => handleDragStart(col.key)}
                     onDragOver={(e) => handleDragOver(e, col.key)}
                     onDrop={handleDrop}
-                    className={`px-3 py-2 text-${col.align} cursor-grab active:cursor-grabbing select-none`}
+                    className={`px-3 py-2 cursor-grab active:cursor-grabbing select-none ${col.align === 'right' ? 'text-right' : 'text-left'}`}
                   >
                     {col.label}
                   </th>
@@ -192,7 +192,7 @@ export default function SchedulePanel() {
                   {orderedCols.map(col => (
                     <td
                       key={col.key}
-                      className={`px-3 py-1.5 text-${col.align}${col.key === 'period' ? ' text-steel-blue' : ''}${col.key === 'totalPayment' ? ' font-medium' : ''}`}
+                      className={`px-3 py-1.5 ${col.align === 'right' ? 'text-right' : 'text-left'}${col.key === 'period' ? ' text-steel-blue' : ''}${col.key === 'totalPayment' ? ' font-medium' : ''}`}
                     >
                       {col.key === 'extraPayment' ? (
                         <ExtraPaymentCell
