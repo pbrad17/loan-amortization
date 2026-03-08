@@ -109,16 +109,6 @@ export default function InputsPanel() {
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-steel-blue mb-1">First Payment Date</label>
-            <input
-              type="date"
-              value={loanInputs.firstPaymentDate}
-              onChange={(e) => updateInput('firstPaymentDate', e.target.value)}
-              className="w-full bg-dark-bg border border-border rounded px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
-            />
-          </div>
-
           <NumericInput
             label="Global Extra Payment"
             value={loanInputs.globalExtraPayment}

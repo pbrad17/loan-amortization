@@ -105,29 +105,11 @@ function AmortizationDoc({ loanInputs, schedule, summary, theme }) {
             </View>
           ))}
         </View>
-
-        <Text style={s.sectionTitle}>Amortization Schedule</Text>
-
-        {/* First chunk of rows on summary page */}
-        <View style={s.tableHeader}>
-          {COLS.map(col => (
-            <Text key={col.key} style={[s.th, { width: col.width, textAlign: col.align }]}>{col.label}</Text>
-          ))}
-        </View>
-        {(pages[0] || []).map((row, i) => (
-          <View key={row.period} style={[s.row, i % 2 === 0 ? s.rowEven : s.rowAlt]}>
-            {COLS.map(col => (
-              <Text key={col.key} style={[s.cell, { width: col.width, textAlign: col.align }]}>
-                {formatVal(col.key, row)}
-              </Text>
-            ))}
-          </View>
-        ))}
       </Page>
 
-      {/* Continuation pages */}
-      {pages.slice(1).map((chunk, pageIdx) => (
-        <Page key={pageIdx + 1} size="LETTER" style={s.page}>
+      {/* Schedule pages — uniform 40 rows each */}
+      {pages.map((chunk, pageIdx) => (
+        <Page key={pageIdx} size="LETTER" style={s.page}>
           <View style={s.tableHeader}>
             {COLS.map(col => (
               <Text key={col.key} style={[s.th, { width: col.width, textAlign: col.align }]}>{col.label}</Text>

@@ -3,11 +3,7 @@ import { generateSchedule, getScheduleSummary } from './utils/amortization';
 
 const AppContext = createContext();
 
-const today = new Date();
-const todayStr = today.toISOString().split('T')[0];
-const nextMonth = new Date(today);
-nextMonth.setMonth(nextMonth.getMonth() + 1);
-const firstPayStr = nextMonth.toISOString().split('T')[0];
+const todayStr = new Date().toISOString().split('T')[0];
 
 export function AppProvider({ children }) {
   const [loanInputs, setLoanInputs] = useState({
@@ -16,7 +12,6 @@ export function AppProvider({ children }) {
     termYears: 30,
     frequency: 'monthly',
     startDate: todayStr,
-    firstPaymentDate: firstPayStr,
     globalExtraPayment: 0,
   });
 

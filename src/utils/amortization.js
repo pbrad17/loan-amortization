@@ -51,7 +51,7 @@ export function generateSchedule(loanInputs, extraPaymentOverrides = {}) {
     annualRate,
     termYears,
     frequency,
-    firstPaymentDate,
+    startDate,
     globalExtraPayment,
   } = loanInputs;
 
@@ -64,7 +64,7 @@ export function generateSchedule(loanInputs, extraPaymentOverrides = {}) {
 
   const schedule = [];
   let balance = loanBalance;
-  let paymentDate = new Date(firstPaymentDate + 'T00:00:00');
+  let paymentDate = addPeriod(new Date(startDate + 'T00:00:00'), frequency);
 
   for (let period = 1; balance > 0.005; period++) {
     const interestPortion = balance * periodicRate;
